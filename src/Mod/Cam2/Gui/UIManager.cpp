@@ -307,11 +307,17 @@ void UIManagerInst::OnChange(Gui::SelectionSingleton::SubjectType &rCaller,
 }
 
 /**
+ * Sets the currently selected tool path line(s)
+ */
+void UIManagerInst::setToolPathLineSelection(std::set<int> &tpSelection) {
+    Q_EMIT updatedToolPathLineSelection(tpSelection);
+}
+
+/**
  * Performs the work to analyse the current selection and send setting update signal
  */
 void UIManagerInst::updateCamProjectSelection(const char* pDocName) {
 
-//	Base::Console().Log("New Selection\n");
     // make unique list of selected objects
     std::vector<Gui::SelectionSingleton::SelObj> objs = Gui::Selection().getSelection(pDocName);
     std::set<App::DocumentObject*> selDocObjs;
@@ -326,39 +332,77 @@ void UIManagerInst::updateCamProjectSelection(const char* pDocName) {
     	{
 			Cam::TPGFeature *tpgFeature = dynamic_cast<Cam::TPGFeature *>(docObj);
 			if (tpgFeature) {
-//				Cam::TPG *tpg = tpgFeature->getTPG();
 				Q_EMIT updatedTPGSelection(tpgFeature);
 			}
             else
             	Q_EMIT updatedTPGSelection(NULL);
             Q_EMIT updatedToolPathSelection(NULL);
+            Q_EMIT updatedMachineProgramSelection(NULL);
     	}
         else if (docObj->isDerivedFrom(Cam::ToolPathFeature::getClassTypeId())) {
             Cam::ToolPathFeature *tpFeature = dynamic_cast<Cam::ToolPathFeature *>(docObj);
-            Q_EMIT updatedMachineProgramSelection(NULL);
-            if (tpFeature)
+
+            if (tpFeature) {
+                // find matching machine program (and signal its selection before the toolpath)
+                std::vector<App::DocumentObject*> refMe = tpFeature->getInList();
+                Cam::TPGFeature *parentTPG = NULL;
+                for (std::vector<App::DocumentObject*>::iterator it = refMe.begin(); it != refMe.end(); ++it) {
+                    if ((*it)->getTypeId() == Cam::TPGFeature::getClassTypeId()) {
+                        parentTPG = dynamic_cast<Cam::TPGFeature *>(*it);
+                        break;
+                    }
+                }
+                if (parentTPG) {
+                    Q_EMIT updatedMachineProgramSelection(dynamic_cast<Cam::MachineProgramFeature *>(parentTPG->MachineProgram.getValue(Cam::MachineProgramFeature::getClassTypeId())));
+                } else
+                    Q_EMIT updatedMachineProgramSelection(NULL);
+
+                // signal selection change
                 Q_EMIT updatedToolPathSelection(tpFeature);
-            else
+            }
+            else {
                 Q_EMIT updatedToolPathSelection(NULL);
+                Q_EMIT updatedMachineProgramSelection(NULL);
+            }
             Q_EMIT updatedTPGSelection(NULL);
         }
         else if (docObj->isDerivedFrom(Cam::MachineProgramFeature::getClassTypeId())) {
             Cam::MachineProgramFeature *mpFeature = dynamic_cast<Cam::MachineProgramFeature *>(docObj);
             Q_EMIT updatedToolPathSelection(NULL);
-            if (mpFeature)
+            if (mpFeature) {
+                // find matching toolpath (and signal its selection before the machine program)
+                std::vector<App::DocumentObject*> refMe = mpFeature->getInList();
+                Cam::TPGFeature *parentTPG = NULL;
+                for (std::vector<App::DocumentObject*>::iterator it = refMe.begin(); it != refMe.end(); ++it) {
+                    if ((*it)->getTypeId() == Cam::TPGFeature::getClassTypeId()) {
+                        parentTPG = dynamic_cast<Cam::TPGFeature *>(*it);
+                        break;
+                    }
+                }
+                if (parentTPG) {
+                    Q_EMIT updatedToolPathSelection(dynamic_cast<Cam::ToolPathFeature *>(parentTPG->ToolPath.getValue(Cam::ToolPathFeature::getClassTypeId())));
+                } else
+                    Q_EMIT updatedToolPathSelection(NULL);
+
+                // signal selection change
                 Q_EMIT updatedMachineProgramSelection(mpFeature);
-            else
+            }
+            else {
                 Q_EMIT updatedToolPathSelection(NULL);
+                Q_EMIT updatedMachineProgramSelection(NULL);
+            }
             Q_EMIT updatedTPGSelection(NULL);
         }
         else {
         	Q_EMIT updatedTPGSelection(NULL);
             Q_EMIT updatedToolPathSelection(NULL);
+            Q_EMIT updatedMachineProgramSelection(NULL);
         }
     }
     else {
     	Q_EMIT updatedTPGSelection(NULL);
         Q_EMIT updatedToolPathSelection(NULL);
+        Q_EMIT updatedMachineProgramSelection(NULL);
     }
 }
 

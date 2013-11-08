@@ -127,6 +127,12 @@ public:
   virtual void OnChange(Gui::SelectionSingleton::SubjectType &rCaller,
                         Gui::SelectionSingleton::MessageType Reason);
 
+
+  /**
+   * Sets the currently selected tool path line(s)
+   */
+  void setToolPathLineSelection(std::set<int> &tpSelection);
+
 public Q_SLOTS:
   void addTPG(Cam::TPGDescriptor *tpg);
   void reloadTPGs();
@@ -140,6 +146,8 @@ Q_SIGNALS:
   void updatedMachineProgramSelection(Cam::MachineProgramFeature* machineProgram);
 
   void updatedTPGStateSig(QString tpgid, Cam::TPG::State state, int progress);
+
+  void updatedToolPathLineSelection(std::set<int> tpSelection);
 };
 
 /// Get the global instance

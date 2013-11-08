@@ -41,27 +41,17 @@ MachineProgramDockWindow::MachineProgramDockWindow(Gui::Document*  pcDocument, Q
 
     clearSelection();
 
-	// listen for ToolPath Selection events
-	QObject::connect(&UIManager(), SIGNAL(updatedToolPathSelection(Cam::ToolPathFeature*)), this,
-          SLOT(updatedToolPathSelection(Cam::ToolPathFeature*)));
-
 	// listen for Machine Program Selection events
 	QObject::connect(&UIManager(), SIGNAL(updatedMachineProgramSelection(Cam::MachineProgramFeature*)), this,
           SLOT(updatedMachineProgramSelection(Cam::MachineProgramFeature*)));
 
+	updatingLineSelection = false;
+    currentMachineProgram = NULL;
+
+	//TODO: check if initial selection is such that a MP should be shown
 }
 
 MachineProgramDockWindow::~MachineProgramDockWindow() {
-}
-
-/**
- * Set the Toolpath to be displayed.  It expects the toolpath to be in HTML
- * format already.
- */
-void MachineProgramDockWindow::setToolPath(const QString &toolpath)
-{
-//  textedit->setHtml(toolpath);
-    ui->MachineProgram->setSelectionMode(QAbstractItemView::MultiSelection);
 }
 
 /**
@@ -73,63 +63,39 @@ void MachineProgramDockWindow::clearSelection() {
     ui->MachineProgram->addItem(QString::fromUtf8("No machine program/tool-path selected"));
 }
 
-
-/**
- * Receive messages to update the toolpath display
- */
-void MachineProgramDockWindow::updatedToolPathSelection(Cam::ToolPathFeature* toolpath) {
-    if (toolpath != NULL) {
-
-        const std::vector<std::string> tpcmds = toolpath->TPCommands.getValues();
-        if (tpcmds.size() > 0) {
-
-            // format the toolpath
-            //TODO: do a colour coded rendering
-            std::vector<std::string>::const_iterator it;
-            std::stringstream ss;
-            ss << "<p><b>Toolpath</b>:</p>" << std::endl;
-            ss << "<ol>" << std::endl;
-            for (it = tpcmds.begin(); it != tpcmds.end(); ++it)
-                ss << "  <li><i>" << (*it) << "</i></li>" << std::endl;
-            ss << "</ol>" << std::endl;
-
-            // update display
-            setToolPath(QString::fromStdString(ss.str()));
-        }
-        else
-            clearSelection();
-    }
-    else
-        clearSelection();
-}
-
 /**
  * Receive messages to update the machineProgram display
  */
 void MachineProgramDockWindow::updatedMachineProgramSelection(Cam::MachineProgramFeature* machineProgram) {
     if (machineProgram != NULL) {
+        if (machineProgram != currentMachineProgram) {
+            const std::vector<std::string> mpcmds = machineProgram->MPCommands.getValues();
+            if (mpcmds.size() > 0) {
 
-        const std::vector<std::string> mpcmds = machineProgram->MPCommands.getValues();
-        if (mpcmds.size() > 0) {
+                // format the machine program
+                //TODO: do a colour coded rendering
+                //INFO: http://www.qtcentre.org/threads/27777-Customize-QListWidgetItem-how-to?p=135369#post135369
 
-            // format the toolpath
-            //TODO: do a colour coded rendering
-            std::vector<std::string>::const_iterator it;
-            std::stringstream ss;
-            ss << "<p><b>Machine Program</b>:</p>" << std::endl;
-            ss << "<ol>" << std::endl;
-            for (it = mpcmds.begin(); it != mpcmds.end(); ++it)
-                ss << "  <li><i>" << (*it) << "</i></li>" << std::endl;
-            ss << "</ol>" << std::endl;
-
-            // update display
-            setToolPath(QString::fromStdString(ss.str()));
+                updatingLineSelection = true;
+                ui->MachineProgram->clear();
+                std::vector<std::string>::const_iterator it;
+                int i = 0;
+                for (it = mpcmds.begin(); it != mpcmds.end(); ++it) {
+                    QListWidgetItem *item = new QListWidgetItem();
+                    item->setText(QString::fromStdString(*it));
+                    item->setData(Qt::UserRole, QVariant::fromValue(i));
+                    ui->MachineProgram->addItem(item);
+                }
+                updatingLineSelection = false;
+                ui->MachineProgram->setSelectionMode(QAbstractItemView::ExtendedSelection);
+            }
+            else
+                clearSelection();
         }
-        else
-            clearSelection();
     }
     else
         clearSelection();
+    currentMachineProgram = machineProgram;
 }
 
 #include "moc_MachineProgramDockWindow.cpp"

@@ -43,21 +43,11 @@ public:
   virtual ~MachineProgramDockWindow();
 
   /**
-   * Set the Toolpath to be displayed.  It expects the toolpath to be in HTML
-   * format already.
-   */
-  void setToolPath(const QString &toolpath);
-
-  /**
    * Clear the output (i.e. no toolpath or machine program selected)
    */
   void clearSelection();
 
 public Q_SLOTS:
-    /**
-     * Receive messages to update the toolpath display
-     */
-    void updatedToolPathSelection(Cam::ToolPathFeature* toolpath);
 
     /**
      * Receive messages to update the machineProgram display
@@ -65,7 +55,8 @@ public Q_SLOTS:
     void updatedMachineProgramSelection(Cam::MachineProgramFeature* machineProgram);
 
 protected:
-//  QTextEdit *textedit;
+    bool updatingLineSelection;
+    Cam::MachineProgramFeature* currentMachineProgram;
 
 private:
     Ui_MachineProgramDockWindow* ui;
